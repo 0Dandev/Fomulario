@@ -82,11 +82,11 @@ function exibirAlunos(alunos) {
 // =========================================================
 
 formAluno.addEventListener('submit', async (e) => {
-    e.preventDefault(); // Impede o recarregamento da página
+    e.preventDefault(); 
     
-    // Coleta dos dados do formulário
-    const alunoData = {
-        id: inputId.value ? parseInt(inputId.value) : 0, // Garante que o ID seja numérico ou 0
+    // 1. Coleta dos dados do formulário com o ID (0 se for novo)
+    const alunoDataTemp = {
+        id: inputId.value ? parseInt(inputId.value) : 0, 
         nome: document.getElementById('nome').value,
         turma: document.getElementById('turma').value,
         curso: document.getElementById('curso').value,
@@ -94,14 +94,22 @@ formAluno.addEventListener('submit', async (e) => {
     };
     
     // Simples validação dos dados
-    if (!alunoData.nome || !alunoData.turma || !alunoData.curso || !alunoData.matricula) {
+    if (!alunoDataTemp.nome || !alunoDataTemp.turma || !alunoDataTemp.curso || !alunoDataTemp.matricula) {
         alert("Por favor, preencha todos os campos.");
         return;
     }
 
-    const isUpdate = alunoData.id !== 0; // Se o ID for diferente de zero, é atualização
-    const url = isUpdate ? `${API_BASE_URL}/${alunoData.id}` : API_BASE_URL;
+    const isUpdate = alunoDataTemp.id !== 0; 
+    const url = isUpdate ? `${API_BASE_URL}/${alunoDataTemp.id}` : API_BASE_URL;
     const method = isUpdate ? 'PUT' : 'POST';
+
+    // 2. Cria o objeto final de dados
+    const alunoData = {...alunoDataTemp}; 
+    
+    // CORREÇÃO CRÍTICA: Se for POST (Criação), remove o ID do corpo da requisição
+    if (!isUpdate) {
+        delete alunoData.id; 
+    }
 
     try {
         const response = await fetch(url, {
@@ -109,22 +117,24 @@ formAluno.addEventListener('submit', async (e) => {
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify(alunoData),
+            // Envia o objeto corrigido (sem 'id' no POST)
+            body: JSON.stringify(alunoData), 
         });
 
         if (!response.ok) {
-            throw new Error(`Erro ao ${isUpdate ? 'atualizar' : 'criar'} aluno: ${response.statusText}`);
+            const errorText = await response.text(); 
+            throw new Error(`Erro ${response.status} ao ${isUpdate ? 'atualizar' : 'criar'} aluno: ${errorText || response.statusText}`);
         }
 
         alert(`Aluno ${isUpdate ? 'atualizado' : 'cadastrado'} com sucesso!`);
-        formAluno.reset(); // Limpa o formulário
-        inputId.value = ''; // Garante que o campo ID seja limpo
-        btnSalvar.textContent = 'Salvar Aluno'; // Volta o botão para 'Salvar'
-        carregarAlunos(); // Recarrega a lista
+        formAluno.reset(); 
+        inputId.value = ''; 
+        btnSalvar.textContent = 'Salvar Aluno'; 
+        carregarAlunos(); 
         
     } catch (error) {
         console.error(`Erro ao tentar ${method}:`, error);
-        alert(`Ocorreu um erro. Verifique o console.`);
+        alert(`Ocorreu um erro. Detalhes: ${error.message}`);
     }
 });
 
